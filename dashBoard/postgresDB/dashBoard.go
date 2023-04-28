@@ -3,7 +3,7 @@ package postgresDB
 import (
 	"context"
 	"errors"
-	n "github.com/example/dashBoard/api/http1"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/gommon/log"
 	"github.com/lib/pq"
@@ -26,7 +26,21 @@ func (s *myService) GetByID(ctx context.Context, id string) (string, error) {
 	// implementation
 }
 
-func SaveUser(context context.Context, user n.MyRequest, db *sqlx.DB) (n.MyRequest, error) {
+type MyRequest struct {
+	Id          string `json:"id,omitempty" db:"id, omitempty"`
+	Name        string `json:"name,omitempty" db:"name, omitempty"`
+	Description string `json:"description,omitempty" db:"description, omitempty"`
+	MetaData    string `json:"metadata,omitempty" db:"metadata, omitempty"`
+	UpdatedTime string `json:"updated_time,omitempty" db:"updated_time, omitempty"`
+	UpdatedBy   string `json:"updated_by,omitempty" db:"updated_by, omitempty"`
+}
+type UpdateRequest struct {
+	Name        string `json:"name,omitempty" db:"name, omitempty"`
+	Description string `json:"description,omitempty" db:"description, omitempty"`
+	MetaData    string `json:"metadata,omitempty" db:"metadata, omitempty"`
+}
+
+func SaveUser(context context.Context, user MyRequest, db *sqlx.DB) (MyRequest, error) {
 
 	statement := `
 		INSERT INTO dashboard(id,name,description,metadata,updated_time,updated_by)
@@ -42,6 +56,30 @@ func SaveUser(context context.Context, user n.MyRequest, db *sqlx.DB) (n.MyReque
 			}
 		}
 		return user, errors.New("dang ky that bai")
+	}
+	return user, nil
+}
+
+func UpdateUser(context context.Context, user MyRequest, db *sqlx.DB) (MyRequest, error) {
+
+	statement := `
+		UPDATE dashboard SET  name = :name,description = :description  WHERE metadata = :metadata;
+	`
+	fmt.Println("****")
+	fmt.Println(user.Name)
+	fmt.Println(user.MetaData)
+	fmt.Println(user.Description)
+	fmt.Println("****")
+
+	_, err := db.NamedExecContext(context, statement, user)
+	if err != nil {
+		log.Error(err.Error())
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "unique_violation" {
+				return user, errors.New("Ng dung ton tai")
+			}
+		}
+		return user, errors.New("cap nhat that bai")
 	}
 	return user, nil
 }
